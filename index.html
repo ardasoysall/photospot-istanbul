@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Photospot - Istanbul Photography Guide</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+    }
+    
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    
+    .header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px 20px;
+      z-index: 1000;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      margin: 0;
+    }
+    
+    .header p {
+      font-size: 12px;
+      margin: 5px 0 0 0;
+      opacity: 0.9;
+    }
+    
+    #sidebar {
+      position: absolute;
+      top: 90px;
+      left: 20px;
+      width: 320px;
+      max-height: calc(100vh - 120px);
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      z-index: 999;
+      overflow-y: auto;
+    }
+    
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 2px solid #f0f0f0;
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 1;
+    }
+    
+    .sidebar-header h2 {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+    
+    #search-input {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    
+    .spot-list {
+      padding: 10px;
+    }
+    
+    .spot-item {
+      padding: 15px;
+      margin: 8px 0;
+      background: #f9f9f9;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    
+    .spot-item:hover {
+      background: #f0f0f0;
+      border-color: #667eea;
+      transform: translateX(5px);
+    }
+    
+    .spot-item h3 {
+      font-size: 15px;
+      color: #333;
+      margin-bottom: 5px;
+    }
+    
+    .spot-item p {
+      font-size: 12px;
+      color: #666;
+      margin: 3px 0;
+    }
+    
+    .spot-time {
+      display: inline-block;
+      background: #ffd700;
+      color: #333;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      margin-top: 5px;
+    }
+    
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    .popup-content {
+      padding: 0;
+      min-width: 300px;
+    }
+    
+    .popup-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+    }
+    
+    .popup-header h3 {
+      margin: 0 0 5px 0;
+      font-size: 18px;
+    }
+    
+    .popup-header p {
+      margin: 0;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+    
+    .popup-images {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      padding: 10px;
+      background: #f9f9f9;
+    }
+    
+    .popup-images img {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+    
+    .popup-info {
+      padding: 15px;
+    }
+    
+    .popup-time {
+      display: inline-block;
+      background: #ffd700;
+      color: #333;
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    
+    .popup-description {
+      font-size: 13px;
+      color: #555;
+      line-height: 1.5;
+      margin: 10px 0;
+    }
+    
+    .popup-coordinates {
+      font-size: 11px;
+      color: #999;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #e0e0e0;
+    }
+    
+    .add-photo-btn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 12px;
+      transition: all 0.2s;
+    }
+    
+    .add-photo-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    @media (max-width: 768px) {
+      #sidebar {
+        width: 90%;
+        left: 5%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📸 Photospot Istanbul</h1>
+    <p>Discover the best spots to photograph Istanbul's iconic landmarks</p>
+  </div>
+
+  <div id="sidebar">
+    <div class="sidebar-header">
+      <h2>Photo Spots (20)</h2>
+      <input type="text" id="search-input" placeholder="Search landmarks..." />
+    </div>
+    <div class="spot-list" id="spot-list"></div>
+  </div>
+  
+  <div id="map"></div>
+
+  <!-- Hidden file input for photo uploads -->
+  <input type="file" id="photoUploadInput" accept="image/*" multiple style="display: none;" />
+
+  <!-- Leaflet JavaScript -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <script>
+    // Photo spots database
+    // TODO: Replace placeholder images with real photos from Pexels/downloaded images
+    // Image URL format: Direct link to image file (e.g., https://your-host.com/image.jpg)
+    const photoSpots = [
+      {
+        id: 1,
+        landmark: "Maiden Tower",
+        shootingLocation: "Salacak Shore",
+        lat: 41.0214,
+        lng: 29.0048,
+        bestTime: "Sunset - Golden Hour",
+        description: "Perfect waterfront view of Maiden Tower with Bosphorus. The golden hour creates magical reflections on the water.",
+        images: [
+          "https://picsum.photos/seed/maiden1/800/600", // TODO: Replace with real photo
+          "https://picsum.photos/seed/maiden2/800/600", // TODO: Replace with real photo
+          "https://picsum.photos/seed/maiden3/800/600"  // TODO: Replace with real photo
+        ]
+      },
+      {
+        id: 2,
+        landmark: "Hagia Sophia",
+        shootingLocation: "Sultan Ahmet Park",
+        lat: 41.0082,
+        lng: 28.9784,
+        bestTime: "Morning - Blue Hour",
+        description: "Classic frontal view with the fountain in foreground. Early morning light illuminates the domes beautifully.",
+        images: [
+          "https://picsum.photos/seed/hagia1/800/600", // TODO: Replace with real photo
+          "https://picsum.photos/seed/hagia2/800/600", // TODO: Replace with real photo
+          "https://picsum.photos/seed/hagia3/800/600"  // TODO: Replace with real photo
+        ]
+      },
+      {
+        id: 3,
+        landmark: "Blue Mosque",
+        shootingLocation: "Hippodrome Square",
+        lat: 41.0055,
+        lng: 28.9769,
+        bestTime: "Sunset",
+        description: "Iconic view of all six minarets. The square provides perfect symmetry and the sunset sky adds drama.",
+        images: [
+          "https://picsum.photos/seed/bluemosque1/800/600", // TODO: Replace with real photo
+          "https://picsum.photos/seed/bluemosque2/800/600", // TODO: Replace with real photo
+          "https://picsum.photos/seed/bluemosque3/800/600"  // TODO: Replace with real photo
+        ]
+      },
+      {
+        id: 4,
+        landmark: "Galata Tower",
+        shootingLocation: "Galata Bridge",
+        lat: 41.0199,
+        lng: 28.9744,
+        bestTime: "Evening - Blue Hour",
+        description: "Tower silhouette with Golden Horn in frame. Fishermen on bridge add authentic Istanbul atmosphere.",
+        images: [
+          "https://picsum.photos/seed/galata1/800/600", // TODO: Replace with real photo
+          "https://picsum.photos/seed/galata2/800/600", // TODO: Replace with real photo
+          "https://picsum.photos/seed/galata3/800/600"  // TODO: Replace with real photo
+        ]
+      },
+      {
+        id: 5,
+        landmark: "Topkapi Palace",
+        shootingLocation: "Gülhane Park Viewpoint",
+        lat: 41.0115,
+        lng: 28.9815,
+        bestTime: "Afternoon",
+        description: "Palace walls and gardens from elevated position. Spring blooms add color to your composition.",
+        images: [
+          "https://picsum.photos/seed/topkapi1/800/600", // TODO: Replace with real photo
+          "https://picsum.photos/seed/topkapi2/800/600", // TODO: Replace with real photo
+          "https://picsum.photos/seed/topkapi3/800/600"  // TODO: Replace with real photo
+        ]
+      },
+      {
+        id: 6,
+        landmark: "Ortaköy Mosque",
+        shootingLocation: "Ortaköy Pier",
+        lat: 41.0553,
+        lng: 29.0267,
+        bestTime: "Sunset",
+        description: "Mosque with Bosphorus Bridge backdrop. One of Istanbul's most photographed angles.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Ortakoy+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Ortakoy+View+2"
+        ]
+      },
+      {
+        id: 7,
+        landmark: "Rumeli Fortress",
+        shootingLocation: "Anadolu Hisarı Shore",
+        lat: 41.0839,
+        lng: 29.0644,
+        bestTime: "Morning",
+        description: "Full fortress view across Bosphorus. Morning sun lights up the stone walls perfectly.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Rumeli+Fortress+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Rumeli+Fortress+View+2"
+        ]
+      },
+      {
+        id: 8,
+        landmark: "Dolmabahçe Palace",
+        shootingLocation: "Beşiktaş Waterfront",
+        lat: 41.0392,
+        lng: 29.0004,
+        bestTime: "Afternoon",
+        description: "Palace facade reflected in Bosphorus waters. Afternoon light enhances the ornate architecture.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Dolmabahce+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Dolmabahce+View+2"
+        ]
+      },
+      {
+        id: 9,
+        landmark: "Bosphorus Bridge",
+        shootingLocation: "Çengelköy Tea Gardens",
+        lat: 41.0453,
+        lng: 29.0711,
+        bestTime: "Night",
+        description: "Bridge lights creating stunning reflections. Night photography captures the illuminated bridge magnificently.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Bosphorus+Bridge+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Bosphorus+Bridge+View+2"
+        ]
+      },
+      {
+        id: 10,
+        landmark: "Grand Bazaar",
+        shootingLocation: "Main Entrance Arch",
+        lat: 41.0108,
+        lng: 28.9680,
+        bestTime: "Midday",
+        description: "Historic entrance with shoppers creating dynamic scenes. Natural light from skylights inside.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Grand+Bazaar+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Grand+Bazaar+View+2"
+        ]
+      },
+      {
+        id: 11,
+        landmark: "Spice Bazaar",
+        shootingLocation: "Eminönü Square",
+        lat: 41.0166,
+        lng: 28.9706,
+        bestTime: "Morning",
+        description: "Bazaar entrance with pigeons and vendors. Morning bustle adds life to your shots.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Spice+Bazaar+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Spice+Bazaar+View+2"
+        ]
+      },
+      {
+        id: 12,
+        landmark: "Balat Houses",
+        shootingLocation: "Kiremit Caddesi",
+        lat: 41.0297,
+        lng: 28.9486,
+        bestTime: "Afternoon",
+        description: "Colorful historic houses on steep streets. Perfect for Instagram-worthy shots.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Balat+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Balat+View+2"
+        ]
+      },
+      {
+        id: 13,
+        landmark: "Istiklal Street",
+        shootingLocation: "Nostalgic Tram Stop",
+        lat: 41.0369,
+        lng: 28.9784,
+        bestTime: "Evening",
+        description: "Red tram on historic avenue. Evening crowds and street lights create atmosphere.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Istiklal+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Istiklal+View+2"
+        ]
+      },
+      {
+        id: 14,
+        landmark: "Pierre Loti Hill",
+        shootingLocation: "Cable Car Panorama Point",
+        lat: 41.0515,
+        lng: 28.9354,
+        bestTime: "Sunset",
+        description: "Panoramic Golden Horn view. Sunset creates golden glow over the historic peninsula.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Pierre+Loti+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Pierre+Loti+View+2"
+        ]
+      },
+      {
+        id: 15,
+        landmark: "Çamlıca Hill",
+        shootingLocation: "Observation Terrace",
+        lat: 41.0221,
+        lng: 29.0669,
+        bestTime: "Sunset",
+        description: "Both Bosphorus bridges in one frame. Highest viewpoint in Istanbul for cityscape.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Camlica+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Camlica+View+2"
+        ]
+      },
+      {
+        id: 16,
+        landmark: "Karaköy Street Art",
+        shootingLocation: "Near Banksy Hotel",
+        lat: 41.0244,
+        lng: 28.9778,
+        bestTime: "Anytime",
+        description: "Vibrant street art murals. Great for urban photography and portraits.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Karakoy+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Karakoy+View+2"
+        ]
+      },
+      {
+        id: 17,
+        landmark: "Bebek Park",
+        shootingLocation: "Waterfront Promenade",
+        lat: 41.0787,
+        lng: 29.0434,
+        bestTime: "Morning",
+        description: "Peaceful Bosphorus view with local life. Perfect for lifestyle photography.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Bebek+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Bebek+View+2"
+        ]
+      },
+      {
+        id: 18,
+        landmark: "Cihangir",
+        shootingLocation: "Firuzağa Mosque Street",
+        lat: 41.0331,
+        lng: 28.9826,
+        bestTime: "Afternoon",
+        description: "Bohemian neighborhood with artistic vibe. Narrow streets and cafes.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Cihangir+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Cihangir+View+2"
+        ]
+      },
+      {
+        id: 19,
+        landmark: "Taksim Square",
+        shootingLocation: "İstiklal Avenue Entrance",
+        lat: 41.0370,
+        lng: 28.9857,
+        bestTime: "Evening",
+        description: "Heart of modern Istanbul. Monument and bustling square life.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Taksim+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Taksim+View+2"
+        ]
+      },
+      {
+        id: 20,
+        landmark: "Basilica Cistern",
+        shootingLocation: "Medusa Head Column",
+        lat: 41.0084,
+        lng: 28.9779,
+        bestTime: "Interior - Anytime",
+        description: "Mystical underground cistern with dramatic lighting. Reflection in water creates symmetry.",
+        images: [
+          "https://via.placeholder.com/300x200/667eea/ffffff?text=Cistern+View+1",
+          "https://via.placeholder.com/300x200/764ba2/ffffff?text=Cistern+View+2"
+        ]
+      }
+    ];
+
+    // Initialize map centered on Istanbul
+    const map = L.map('map').setView([41.0082, 28.9784], 12);
+
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Custom camera icon for markers
+    const cameraIcon = L.divIcon({
+      html: '📷',
+      className: 'camera-marker',
+      iconSize: [30, 30]
+    });
+
+    // Create popup content with Add Photo button
+    function createPopupContent(spot) {
+      return `
+        <div class="popup-content">
+          <div class="popup-header">
+            <h3>${spot.landmark}</h3>
+            <p>📍 ${spot.shootingLocation}</p>
+          </div>
+          <div class="popup-images">
+            ${spot.images.map(img => `<img src="${img}" alt="${spot.landmark}">`).join('')}
+          </div>
+          <div class="popup-info">
+            <div class="popup-time">⏰ ${spot.bestTime}</div>
+            <div class="popup-description">${spot.description}</div>
+            <div class="popup-coordinates">
+              📍 ${spot.lat.toFixed(4)}, ${spot.lng.toFixed(4)}
+            </div>
+            <button class="add-photo-btn" onclick="openPhotoUpload(${spot.id})">
+              📸 Add Your Photo Here
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Add markers for all photo spots
+    const markers = [];
+    photoSpots.forEach(spot => {
+      const marker = L.marker([spot.lat, spot.lng], { icon: cameraIcon })
+        .addTo(map)
+        .bindPopup(createPopupContent(spot), {
+          maxWidth: 350,
+          className: 'photo-popup'
+        });
+      
+      markers.push({ marker, spot });
+    });
+
+    // Populate sidebar list
+    function populateSpotList(spots = photoSpots) {
+      const listContainer = document.getElementById('spot-list');
+      listContainer.innerHTML = spots.map(spot => `
+        <div class="spot-item" onclick="focusOnSpot(${spot.id})">
+          <h3>${spot.landmark}</h3>
+          <p>📍 ${spot.shootingLocation}</p>
+          <span class="spot-time">⏰ ${spot.bestTime}</span>
+        </div>
+      `).join('');
+    }
+
+    // Focus on specific spot
+    window.focusOnSpot = function(spotId) {
+      const markerData = markers.find(m => m.spot.id === spotId);
+      if (markerData) {
+        map.setView([markerData.spot.lat, markerData.spot.lng], 16);
+        markerData.marker.openPopup();
+      }
+    };
+
+    // Search functionality
+    document.getElementById('search-input').addEventListener('input', function(e) {
+      const query = e.target.value.toLowerCase();
+      const filtered = photoSpots.filter(spot => 
+        spot.landmark.toLowerCase().includes(query) ||
+        spot.shootingLocation.toLowerCase().includes(query)
+      );
+      populateSpotList(filtered);
+    });
+
+    // Initialize spot list
+    populateSpotList();
+
+    // Photo upload functionality
+    const photoUploadInput = document.getElementById('photoUploadInput');
+    let currentUploadSpotId = null;
+
+    window.openPhotoUpload = function(spotId) {
+      currentUploadSpotId = spotId;
+      photoUploadInput.click();
+    };
+
+    photoUploadInput.addEventListener('change', function(e) {
+      const files = Array.from(e.target.files);
+      
+      if (files.length === 0) return;
+      
+      const spot = photoSpots.find(s => s.id === currentUploadSpotId);
+      if (!spot) return;
+      
+      const newImages = [];
+      let processedCount = 0;
+      
+      files.forEach(file => {
+        if (file.size > 5 * 1024 * 1024) {
+          alert('File too large. Max 5MB per image.');
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          newImages.push(event.target.result);
+          processedCount++;
+          
+          if (processedCount === files.length) {
+            // Add new images to the spot
+            spot.images = [...spot.images, ...newImages].slice(0, 6);
+            
+            // Update the popup
+            const markerData = markers.find(m => m.spot.id === currentUploadSpotId);
+            if (markerData) {
+              markerData.marker.setPopupContent(createPopupContent(spot));
+              markerData.marker.openPopup();
+            }
+            
+            alert(`✅ ${files.length} photo(s) added to ${spot.landmark}!`);
+            photoUploadInput.value = '';
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+  </script>
+</body>
+</html>
